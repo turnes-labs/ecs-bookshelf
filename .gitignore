@@ -34,7 +34,9 @@ secrets.auto.tfvars
 .terraformrc
 terraform.rc
 
-# Keep .terraform.lock.hcl committed: it pins provider versions and checksums
+# Keep .terraform.lock.hcl committed in root modules: it pins provider versions and checksums
+# Child modules don't pin providers; their lock file only comes from validation
+**/modules/**/.terraform.lock.hcl
 
 # ---------------------------------------------------------------------------
 # Go

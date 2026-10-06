@@ -16,6 +16,12 @@ repo = "https://github.com/antonbabenko/pre-commit-terraform"
 rev = "v1.96.1"
 hooks = [
   { id = "terraform_fmt" },
-  { id = "terraform_validate" },
+  # Root modules (bootstrap/, infra/, infra/envs/*): init with -backend=false and
+  # validate. Calling a module validates it too, through the root.
+  { id = "terraform_validate", alias = "terraform_validate_roots", name = "Terraform validate (roots)", args = ["--hook-config=--retry-once-with-cleanup=true"], exclude = '(^|/)modules/' },
+  # Child modules (bootstrap/modules/*, infra/modules/*): validated on their own,
+  # so a commit that only touches a module is still checked. The .terraform/
+  # and lock file this leaves in each module are gitignored.
+  { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = ["--hook-config=--retry-once-with-cleanup=true"], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
   { id = "terraform_docs" }
 ]
