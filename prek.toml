@@ -13,7 +13,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/antonbabenko/pre-commit-terraform"
-rev = "v1.96.1"
+rev = "v1.109.2"
 hooks = [
   { id = "terraform_fmt" },
   # Root modules (bootstrap/, infra/, infra/envs/*): init with -backend=false and
