@@ -2,10 +2,20 @@
 # See https://prek.j178.dev for more information.
 #:schema https://www.schemastore.org/prek.json
 
+
 [[repos]]
 repo = "builtin"
 hooks = [
     { id = "trailing-whitespace" },
     { id = "end-of-file-fixer" },
     { id = "check-added-large-files" },
+]
+
+[[repos]]
+repo = "https://github.com/antonbabenko/pre-commit-terraform"
+rev = "v1.96.1"
+hooks = [
+  { id = "terraform_fmt" },
+  { id = "terraform_validate" },
+  { id = "terraform_docs" }
 ]
