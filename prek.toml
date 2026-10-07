@@ -23,5 +23,14 @@ hooks = [
   # so a commit that only touches a module is still checked. The .terraform/
   # and lock file this leaves in each module are gitignored.
   { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = ["--hook-config=--retry-once-with-cleanup=true"], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
-  { id = "terraform_docs" }
+  { id = "terraform_docs" },
+]
+
+# Checkov's own hook is `language: python`: prek installs it in an isolated
+# virtualenv pinned by `rev`, so developers don't install checkov themselves.
+[[repos]]
+repo = "https://github.com/bridgecrewio/checkov"
+rev = "3.3.25"
+hooks = [
+  { id = "checkov", args = ["--framework", "terraform", "--quiet", "--compact"] },
 ]

@@ -3,6 +3,11 @@ locals {
 }
 
 resource "aws_s3_bucket" "this" {
+  # A sandbox state bucket: versioning already covers recovery, and every
+  # reader and writer is a known role
+  #checkov:skip=CKV_AWS_18:Access logs would need a second bucket; CloudTrail already records who touched the state
+  #checkov:skip=CKV_AWS_144:Cross-region replication doubles cost; versioning covers accidental changes and deletes
+  #checkov:skip=CKV2_AWS_62:Nothing consumes bucket events
   bucket = local.regional_bucket_name
 
   bucket_namespace = "account-regional"
@@ -39,6 +44,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "state_lifecycle" {
     # Permanently delete after N days
     noncurrent_version_expiration {
       noncurrent_days = var.backup_expiration_days
+    }
+
+    # Clean up parts of uploads that never completed
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }
