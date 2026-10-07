@@ -1,0 +1,36 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+
+[[repos]]
+repo = "builtin"
+hooks = [
+    { id = "trailing-whitespace" },
+    { id = "end-of-file-fixer" },
+    { id = "check-added-large-files" },
+]
+
+[[repos]]
+repo = "https://github.com/antonbabenko/pre-commit-terraform"
+rev = "v1.109.2"
+hooks = [
+  { id = "terraform_fmt" },
+  # Root modules (bootstrap/, infra/, infra/envs/*): init with -backend=false and
+  # validate. Calling a module validates it too, through the root.
+  { id = "terraform_validate", alias = "terraform_validate_roots", name = "Terraform validate (roots)", args = ["--hook-config=--retry-once-with-cleanup=true"], exclude = '(^|/)modules/' },
+  # Child modules (bootstrap/modules/*, infra/modules/*): validated on their own,
+  # so a commit that only touches a module is still checked. The .terraform/
+  # and lock file this leaves in each module are gitignored.
+  { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = ["--hook-config=--retry-once-with-cleanup=true"], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
+  { id = "terraform_docs" },
+]
+
+# Checkov's own hook is `language: python`: prek installs it in an isolated
+# virtualenv pinned by `rev`, so developers don't install checkov themselves.
+[[repos]]
+repo = "https://github.com/bridgecrewio/checkov"
+rev = "3.3.25"
+hooks = [
+  { id = "checkov", args = ["--framework", "terraform", "--quiet", "--compact"] },
+]

@@ -1,0 +1,109 @@
+# ---------------------------------------------------------------------------
+# Terraform
+# ---------------------------------------------------------------------------
+# Provider plugins and module cache
+**/.terraform/*
+
+# State: lives in S3 (bootstrap/ keeps its own locally, never in git)
+*.tfstate
+*.tfstate.*
+*.tflock
+
+# Saved plans can contain secrets in plain text
+*.tfplan
+tfplan
+*.plan
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Per-developer or secret variable files. terraform.tfvars is committed:
+# it only holds non-secret settings (region, bucket name, repo)
+*.local.tfvars
+*.secret.tfvars
+secrets.auto.tfvars
+
+# CLI config
+.terraformrc
+terraform.rc
+
+# Keep .terraform.lock.hcl committed in root modules: it pins provider versions and checksums
+# Child modules don't pin providers; their lock file only comes from validation
+**/modules/**/.terraform.lock.hcl
+
+# ---------------------------------------------------------------------------
+# Go
+# ---------------------------------------------------------------------------
+# Build output
+/app/bin/
+/app/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Tests and profiling
+*.test
+*.out
+coverage.*
+*.coverprofile
+*.prof
+*.pprof
+
+# Workspace files are per developer
+go.work
+go.work.sum
+
+# ---------------------------------------------------------------------------
+# Docker / ECS
+# ---------------------------------------------------------------------------
+# Local environment and secrets (DB passwords, AWS profiles)
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+
+# Local compose overrides
+docker-compose.override.yml
+compose.override.yaml
+
+# Task definitions rendered by CI (image tag filled in); the template
+# app/deploy/taskdef.json stays committed
+*.rendered.json
+taskdef.out.json
+
+# Local AWS credentials, never commit
+.aws/
+credentials
+
+# ---------------------------------------------------------------------------
+# Load tests (k6)
+# Raw results stay local; summaries used as evidence go in docs/evidence/
+# ---------------------------------------------------------------------------
+k6-results/
+*.k6.json
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code per-user settings
+.claude/settings.local.json
