@@ -3,13 +3,13 @@
 # ---------------------------------------------------------------------------
 
 variable "prefix" {
-  type    = string
-  default = "bookshelf"
+  description = "Name prefix for every resource: roles <prefix>-deploy-<env>, <prefix>-plan, and the <prefix>-<env>-* resources the deploy roles manage"
+  type        = string
 }
 
-variable "environment" {
-  type    = map(any)
-  default = { dev = {}, stg = {}, prod = {} }
+variable "environments" {
+  description = "Deployment environment names; one deploy role, policy set and state key each"
+  type        = set(string)
 }
 
 variable "oidc_subject_prefix" {
@@ -28,14 +28,13 @@ variable "create_oidc_provider" {
   default     = true
 }
 
-
-
 # ---------------------------------------------------------------------------
 # S3 Backend
 # ---------------------------------------------------------------------------
 
 variable "bucket_name" {
-  type = string
+  description = "State bucket name; the account ID and region are appended (<name>-<account>-<region>-an)"
+  type        = string
 }
 
 variable "backup_transition_days" {
@@ -66,6 +65,7 @@ variable "backup_expiration_days" {
 }
 
 variable "kms_master_key_id" {
-  description = "AWS KMS master key ID used for the SSE-KMS encryption. "
+  description = "KMS key for the state bucket's SSE-KMS encryption. null uses the AWS-managed aws/s3 key"
+  type        = string
   default     = null
 }

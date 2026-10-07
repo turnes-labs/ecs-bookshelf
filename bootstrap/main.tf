@@ -1,5 +1,14 @@
 provider "aws" {
   region = var.region
+
+  default_tags {
+    tags = {
+      Project    = var.prefix
+      ManagedBy  = "terraform"
+      Repository = "${var.github_org}/${var.github_repo}"
+      Stack      = "bootstrap"
+    }
+  }
 }
 
 provider "github" {
@@ -16,10 +25,10 @@ data "github_rest_api" "oidc_subject" {
 }
 
 module "aws" {
-  source      = "./modules/aws"
-  prefix      = var.prefix
-  bucket_name = var.bucket_name
-  environment = var.environment
+  source       = "./modules/aws"
+  prefix       = var.prefix
+  bucket_name  = var.bucket_name
+  environments = keys(var.environment)
 
   oidc_subject_prefix  = jsondecode(data.github_rest_api.oidc_subject.body).sub_claim_prefix
   create_oidc_provider = var.create_oidc_provider

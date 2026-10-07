@@ -14,9 +14,8 @@ locals {
 }
 
 resource "aws_iam_role" "plan" {
-  name                 = "${var.prefix}-plan"
-  assume_role_policy   = templatefile("${path.module}/templates/plan-trust.json.tpl", local.plan_tpl_vars)
-  max_session_duration = 3600
+  name               = "${var.prefix}-plan"
+  assume_role_policy = templatefile("${path.module}/templates/plan-trust.json.tpl", local.plan_tpl_vars)
 }
 
 resource "aws_iam_role_policy_attachment" "plan_readonly" {

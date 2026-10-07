@@ -3,16 +3,18 @@
 # ---------------------------------------------------------------------------
 
 variable "github_org" {
-  description = "github organization or repo owner(user)"
+  description = "GitHub organization or user that owns the repository"
   type        = string
 }
 
 variable "github_repo" {
-  type = string
+  description = "Repository name, without the owner"
+  type        = string
 }
 
 variable "region" {
-  type = string
+  description = "AWS region, published to workflows as the AWS_REGION variable"
+  type        = string
 }
 
 variable "environment" {
@@ -22,7 +24,6 @@ variable "environment" {
     tags               = list(string)
     required_approvals = number
     required_checks    = list(string)
-    reviewers          = list(string)
     wait_timer         = number
   }))
 }

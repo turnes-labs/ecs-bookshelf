@@ -6,7 +6,7 @@ locals {
   # One set of template variables per environment, shared by every template:
   # deploy-trust, deploy-{network,compute,data,iam} and task-boundary.
   tpl_vars = {
-    for env in keys(var.environment) : env => {
+    for env in var.environments : env => {
       environment         = env
       name_prefix         = "${var.prefix}-${env}"
       region              = local.region
@@ -30,9 +30,8 @@ locals {
 resource "aws_iam_role" "deploy" {
   for_each = local.tpl_vars
 
-  name                 = "${var.prefix}-deploy-${each.key}"
-  assume_role_policy   = templatefile("${path.module}/templates/deploy-trust.json.tpl", each.value)
-  max_session_duration = 3600
+  name               = "${var.prefix}-deploy-${each.key}"
+  assume_role_policy = templatefile("${path.module}/templates/deploy-trust.json.tpl", each.value)
 }
 
 resource "aws_iam_policy" "deploy" {

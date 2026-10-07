@@ -1,23 +1,27 @@
 variable "prefix" {
-  type    = string
-  default = "bookshelf"
+  description = "Name prefix for AWS resources (<prefix>-deploy-<env>, <prefix>-plan, <prefix>-<env>-*)"
+  type        = string
+  default     = "bookshelf"
 }
 
 variable "region" {
-  type = string
+  description = "AWS region for the state bucket and every environment"
+  type        = string
 }
 
 variable "bucket_name" {
-  type = string
+  description = "State bucket name; the account ID and region are appended (<name>-<account>-<region>-an)"
+  type        = string
 }
 
 variable "github_org" {
-  description = "github organization or repo owner(user)"
+  description = "GitHub organization or user that owns the repository"
   type        = string
 }
 
 variable "github_repo" {
-  type = string
+  description = "Repository name, without the owner"
+  type        = string
 }
 
 variable "create_oidc_provider" {
@@ -37,7 +41,6 @@ variable "environment" {
                           create, move or delete them
       required_approvals  PR approvals needed to merge into `branches`
       required_checks     status checks (job names) that must pass before merging
-      reviewers           GitHub usernames that must approve each deployment
       wait_timer          minutes to wait before a deployment starts
   EOT
   type = map(object({
@@ -45,7 +48,6 @@ variable "environment" {
     tags               = optional(list(string), [])
     required_approvals = optional(number, 0)
     required_checks    = optional(list(string), [])
-    reviewers          = optional(list(string), [])
     wait_timer         = optional(number, 0)
   }))
   default = {

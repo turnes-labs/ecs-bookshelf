@@ -10,33 +10,25 @@ data "github_repository" "this" {
   full_name = local.repo_full_name
 }
 
-data "github_user" "reviewer" {
-  for_each = toset(flatten([for cfg in var.environment : cfg.reviewers]))
-
-  username = each.value
-}
-
 resource "github_repository_environment" "this" {
   for_each = var.environment
 
-  repository          = data.github_repository.this.name
-  environment         = each.key
-  wait_timer          = each.value.wait_timer
-  can_admins_bypass   = false
-  prevent_self_review = false
-
-  dynamic "reviewers" {
-    for_each = length(each.value.reviewers) > 0 ? [1] : []
-    content {
-      users = [for u in each.value.reviewers : data.github_user.reviewer[u].id]
-    }
-  }
+  repository        = data.github_repository.this.name
+  environment       = each.key
+  wait_timer        = each.value.wait_timer
+  can_admins_bypass = false
 
   # Only the refs in github_repository_environment_deployment_policy may deploy.
   # Without this block any ref could run a job here and assume the AWS role.
   deployment_branch_policy {
     protected_branches     = false
     custom_branch_policies = true
+  }
+
+  # Required reviewers are managed in the web UI (Settings → Environments), so
+  # an apply never removes the people or teams added there.
+  lifecycle {
+    ignore_changes = [reviewers, prevent_self_review]
   }
 }
 
