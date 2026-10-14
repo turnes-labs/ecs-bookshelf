@@ -62,3 +62,14 @@ repo = "local"
 hooks = [
   { id = "act", name = "Run workflows locally (act)", stages = ["pre-push"], language = "system", entry = "act pull_request --rm --pull=false", pass_filenames = false, exclude = '^infra/|\.md$' },
 ]
+
+# Trivy scans the whole working tree for vulnerable dependencies, leaked
+# secrets and misconfigurations (Dockerfiles, Terraform, Kubernetes, etc.).
+# It has no hook of its own, so it needs trivy on the developer's machine.
+# Only HIGH and CRITICAL findings fail the commit; .terraform/ caches are
+# skipped because they hold third-party providers and modules.
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "trivy", name = "Trivy scan", language = "system", entry = "trivy repo --quiet --exit-code 1 --severity HIGH,CRITICAL --scanners vuln,secret,misconfig --skip-dirs **/.terraform .", pass_filenames = false },
+]
