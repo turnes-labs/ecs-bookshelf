@@ -44,3 +44,14 @@ rev = "v1.7.12"
 hooks = [
   { id = "actionlint" },
 ]
+
+# Run the GitHub Actions workflows locally with act (https://nektosact.com)
+# before each commit. Needs act and Docker on the developer's machine. It
+# simulates a `pull_request` event, so jobs gated off PRs (image push) are
+# skipped, and it skips the same paths the workflows ignore.
+[[repos]]
+repo = "local"
+stage = ["pre-push"]
+hooks = [
+  { id = "act", name = "Run workflows locally (act)", language = "system", entry = "act pull_request --rm --pull=false", pass_filenames = false, exclude = '^infra/|\.md$' },
+]
