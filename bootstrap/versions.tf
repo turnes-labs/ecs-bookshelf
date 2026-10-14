@@ -12,10 +12,10 @@ terraform {
     }
   }
 
-  # backend "s3" {
-  #   bucket = "tfstate-bookshelf-794457362166-us-east-2-an"
-  #   key          = "bootstrap/terraform.tfstate"
-  #   region       = "us-east-2"
-  #   use_lockfile = true
-  # }
+  backend "s3" {
+    bucket       = "tfstate-bookshelf-794457362166-us-east-2-an"
+    key          = "bootstrap/terraform.tfstate"
+    region       = "us-east-2"
+    use_lockfile = true
+  }
 }

@@ -20,11 +20,12 @@ variable "region" {
 variable "environment" {
   description = "Deployment environments; see the root module's `environment` variable"
   type = map(object({
-    branches           = list(string)
-    tags               = list(string)
-    required_approvals = number
-    required_checks    = list(string)
-    wait_timer         = number
+    branches                  = list(string)
+    tags                      = list(string)
+    required_approvals        = number
+    require_code_owner_review = bool
+    required_checks           = list(string)
+    wait_timer                = number
   }))
 }
 

@@ -4,9 +4,14 @@
 
 locals {
   plan_tpl_vars = {
-    state_bucket        = aws_s3_bucket.this.id
-    oidc_subject_prefix = var.oidc_subject_prefix
-    oidc_provider_arn   = local.oidc_provider_arn
+    state_bucket      = aws_s3_bucket.this.id
+    oidc_provider_arn = local.oidc_provider_arn
+
+    # Only the allowed workflow files, running for a pull request
+    oidc_subjects = [
+      for wf in var.plan_workflows :
+      "${var.oidc_subject_prefix}:pull_request:job_workflow_ref:${var.workflow_ref_prefix}/${wf}@*"
+    ]
   }
 
   # templates/plan-<concern>.json.tpl, one managed policy each

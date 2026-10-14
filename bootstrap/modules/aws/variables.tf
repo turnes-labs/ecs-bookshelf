@@ -22,6 +22,21 @@ variable "oidc_subject_prefix" {
   }
 }
 
+variable "workflow_ref_prefix" {
+  description = "Start of the `job_workflow_ref` claim for this repository's workflows: <org>/<repo>/.github/workflows"
+  type        = string
+}
+
+variable "plan_workflows" {
+  description = "Workflow files allowed to assume the plan role from pull requests"
+  type        = list(string)
+}
+
+variable "deploy_workflows" {
+  description = "Workflow files allowed to assume an environment's deploy role"
+  type        = list(string)
+}
+
 variable "create_oidc_provider" {
   description = "Create the GitHub OIDC provider. Set to false if the account already has one"
   type        = bool

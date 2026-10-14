@@ -40,6 +40,7 @@ resource "github_repository_ruleset" "branch" {
 
     pull_request {
       required_approving_review_count   = each.value.required_approvals
+      require_code_owner_review         = each.value.require_code_owner_review
       dismiss_stale_reviews_on_push     = each.value.required_approvals > 0
       require_last_push_approval        = each.value.required_approvals > 0
       required_review_thread_resolution = false
