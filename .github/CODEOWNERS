@@ -1,0 +1,11 @@
+# Changes to these paths need a code owner's approval to reach main (and so
+# stg and prod): the `deploy-stg` ruleset requires code owner review.
+
+# Pipelines: a workflow on main runs with the stg and prod AWS roles
+/.github/workflows/  @turnes
+
+# CI access: AWS roles, OIDC trust, GitHub environments and rulesets
+/bootstrap/          @turnes
+
+# This file, so ownership can't be removed without an owner
+/.github/CODEOWNERS  @turnes

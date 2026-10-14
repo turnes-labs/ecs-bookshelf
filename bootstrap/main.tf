@@ -15,10 +15,10 @@ provider "github" {
   owner = var.github_org
 }
 
-# The `sub` prefix GitHub uses in this repo's OIDC tokens. Repositories created
-# or renamed after 2026-07-15 use immutable IDs (repo:<org>@<id>/<repo>@<id>),
-# older ones use repo:<org>/<repo>, and a custom template changes it again, so
-# read it instead of building it.
+# The `repo` segment GitHub uses in this repo's OIDC subjects. Repositories
+# created or renamed after 2026-07-15 use immutable IDs (repo:<org>@<id>/<repo>@<id>),
+# older ones use repo:<org>/<repo>, so read it instead of building it. The rest
+# of the subject comes from the template in modules/github/oidc.tf.
 # https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims
 data "github_rest_api" "oidc_subject" {
   endpoint = "repos/${var.github_org}/${var.github_repo}/actions/oidc/customization/sub"
@@ -31,6 +31,9 @@ module "aws" {
   environments = keys(var.environment)
 
   oidc_subject_prefix  = jsondecode(data.github_rest_api.oidc_subject.body).sub_claim_prefix
+  workflow_ref_prefix  = "${var.github_org}/${var.github_repo}/.github/workflows"
+  plan_workflows       = var.oidc_workflows.plan
+  deploy_workflows     = var.oidc_workflows.deploy
   create_oidc_provider = var.create_oidc_provider
 }
 

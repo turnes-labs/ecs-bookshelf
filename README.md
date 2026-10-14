@@ -42,7 +42,7 @@ app/                          app/                                app/
   Dockerfile                    deploy/taskdef.json                 deploy/taskdef.json
 infra/  (one root)            infra/                              infra/
                                 modules/network/                    modules/...
-                                modules/database/                   envs/staging/
+                                modules/database/                   envs/dev/  envs/stg/
                                 modules/ecs-service/                envs/prod/
 .github/workflows/            .github/workflows/                  .github/workflows/
   ci.yml                        ci.yml  infra.yml                   + reusable release workflow
@@ -87,7 +87,7 @@ So the level that runs is the level in the commit, and the trigger (`on:`) in ea
 | Event | Workflow files used | In practice |
 | --- | --- | --- |
 | `pull_request` | the PR's merge commit | A PR that changes a workflow is tested with its **new** version |
-| `push` to `main` | the new `main` commit | The current level's build / deploy |
+| `push` to `dev` or `main` | the new branch commit | The current level's build / deploy (`dev` exists from v3 on) |
 | `push` of a tag | the tagged commit | `v*` → release; `level-*` → nothing |
 | `workflow_dispatch` | the ref picked in the UI or `--ref` | Can run an old ref; that's why old levels must not deploy from it |
 | `schedule` | always the default branch | Always the current level |
@@ -96,23 +96,33 @@ So the level that runs is the level in the commit, and the trigger (`on:`) in ea
 
 | Workflow | v1 (easy) | v2 (medium) | v3 (hard) |
 | --- | --- | --- | --- |
-| `ci.yml` | PR + push to `main`: Go tests, `terraform fmt`/`validate`/`plan` | PR: tests, image build (no push), `plan` | PR: same, `plan` runs as a matrix over `envs/staging` and `envs/prod` |
+| `ci.yml` | PR + push to `main`: Go tests, `terraform fmt`/`validate`/`plan` | PR: tests, image build (no push), `plan` | PR to `dev` or `main`: same, `plan` runs as a matrix over `vars.ENVIRONMENTS` (`envs/dev`, `envs/stg`, `envs/prod`) with the shared `bookshelf-plan` role |
 | `deploy.yml` | push to `main`: build, push to ECR, `terraform apply` with the new image tag | **removed** | — |
-| `infra.yml` | — | push to `main`, `paths: infra/**`: `terraform apply` | push to `main`, `paths: infra/**`: apply staging, then prod behind a GitHub environment approval |
-| `build.yml` | — | push to `main`, `paths: app/**`: build and push image tagged with the commit SHA | same |
-| `release.yml` | — | push tag `v*`: run `migrate` task, register task definition from `app/deploy/taskdef.json`, update the service | push tag `v*`: calls the reusable deploy workflow for `staging`, then `prod` |
-| `_deploy.yml` | — | — | `workflow_call` only, input `environment`; never runs by itself |
+| `infra.yml` | — | push to `main`, `paths: infra/**`: `terraform apply` | `paths: infra/**`: push to `dev` → apply `envs/dev`; push to `main` → apply `envs/stg`; tag `v*` → apply `envs/prod` |
+| `build.yml` | — | push to `main`, `paths: app/**`: build and push image tagged with the commit SHA | **removed**: each environment builds into its own ECR repository in `_deploy.yml`, because a deploy role can't read another environment's repository |
+| `release.yml` | — | push tag `v*`: run `migrate` task, register task definition from `app/deploy/taskdef.json`, update the service | push to `dev` → `dev`; push to `main` → `stg`; tag `v*` → `prod`. Each calls `_deploy.yml` with that environment |
+| `_deploy.yml` | — | — | `workflow_call` only, input `environment`. The job runs with `environment: <env>`, so it gets that environment's `AWS_ROLE_ARN` and `TF_STATE_KEY`. Builds the image, runs `migrate`, registers the task definition, updates the service |
 
 What this means in practice:
 
 - **v1:** merging to `main` is a deploy. Infra and app ship together in one `terraform apply`.
 - **v2:** merging to `main` changes infra (`infra/**`) or produces an image (`app/**`), but never changes what's serving traffic. Only a `v*` tag deploys a new app version. Infra and app are separate layers with separate pipelines.
-- **v3:** the same as v2, but every apply and release goes to `staging` first and reaches `prod` only after the staging job succeeds and someone approves the `prod` environment. Each environment assumes its own IAM role, so a staging job can't touch prod.
+- **v3:** three environments, each deployed by moving its own ref:
+
+  | Environment | Deploys when | Who can trigger it |
+  | --- | --- | --- |
+  | `dev` | a PR is merged into `dev` | anyone who can merge a PR into `dev` |
+  | `stg` | a PR is merged into `main` | anyone who can merge into `main`, after an approval from someone other than the last pusher |
+  | `prod` | a `v*` tag is pushed on a `main` commit | only the `tag_creators` roles (default: `maintain`, `admin`) |
+
+  `bootstrap/modules/github` enforces this. Each GitHub environment accepts only its own branch or tag, branch rulesets allow changes to `dev` and `main` only through pull requests, and a tag ruleset limits who can create, move or delete `v*` tags. Each environment assumes its own IAM role, so a `dev` job can't touch `stg` or `prod`.
+
+  GitHub can't require a tag to point at a `main` commit. `_deploy.yml` checks it with `git merge-base --is-ancestor "$GITHUB_SHA" origin/main` for `prod`, which catches mistakes. Against someone who can create tags, the only protection is the tag ruleset.
 
 ### Why level tags never deploy
 
 - Release workflows listen to `tags: ['v*']`. Tag globs are anchored, so `level-v2-done` doesn't match `v*`.
-- Workflows that deploy on `main` use `branches: [main]`. A push event filtered by branch ignores tag pushes.
+- Workflows that deploy on a branch use `branches: [main]` (v3: `[dev, main]`). A push event filtered by branch ignores tag pushes.
 - Never write a bare `on: push` (no filters) in a workflow that deploys: it fires on **every** tag push, `level-*` included.
 
 ### Running an old level
@@ -203,7 +213,7 @@ NAT gateways, ALBs and RDS charge by the hour. Destroy the stack when you stop f
 
 ```sh
 cd infra && terraform destroy            # v1–v2
-cd infra/envs/prod && terraform destroy  # v3, then envs/staging
+cd infra/envs/prod && terraform destroy  # v3, then envs/stg and envs/dev
 ```
 
 Task definition revisions registered by CI (v2+) aren't in Terraform state; deregister and delete them separately. Destroy `bootstrap/` only when you're done with the whole track.

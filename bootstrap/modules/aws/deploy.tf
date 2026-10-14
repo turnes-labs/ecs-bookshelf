@@ -7,14 +7,21 @@ locals {
   # deploy-trust, deploy-{network,compute,data,iam} and task-boundary.
   tpl_vars = {
     for env in var.environments : env => {
-      environment         = env
-      name_prefix         = "${var.prefix}-${env}"
-      region              = local.region
-      account_id          = local.account_id
-      state_bucket        = aws_s3_bucket.this.id
-      oidc_subject_prefix = var.oidc_subject_prefix
-      oidc_provider_arn   = local.oidc_provider_arn
-      boundary_arn        = "arn:aws:iam::${local.account_id}:policy/${var.prefix}-${env}-task-boundary"
+      environment       = env
+      name_prefix       = "${var.prefix}-${env}"
+      region            = local.region
+      account_id        = local.account_id
+      state_bucket      = aws_s3_bucket.this.id
+      oidc_provider_arn = local.oidc_provider_arn
+      boundary_arn      = "arn:aws:iam::${local.account_id}:policy/${var.prefix}-${env}-task-boundary"
+
+      # Token subjects this environment's role trusts: only the allowed workflow
+      # files, running in this GitHub environment, from any ref the environment
+      # accepts. Format set by the subject template in modules/github/oidc.tf.
+      oidc_subjects = [
+        for wf in var.deploy_workflows :
+        "${var.oidc_subject_prefix}:environment:${env}:job_workflow_ref:${var.workflow_ref_prefix}/${wf}@*"
+      ]
     }
   }
 

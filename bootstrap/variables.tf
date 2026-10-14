@@ -40,15 +40,19 @@ variable "environment" {
       tags                tag patterns that deploy here; only `tag_creators` can
                           create, move or delete them
       required_approvals  PR approvals needed to merge into `branches`
+      require_code_owner_review
+                          a CODEOWNERS owner must approve PRs that touch their
+                          files (.github/CODEOWNERS)
       required_checks     status checks (job names) that must pass before merging
       wait_timer          minutes to wait before a deployment starts
   EOT
   type = map(object({
-    branches           = optional(list(string), [])
-    tags               = optional(list(string), [])
-    required_approvals = optional(number, 0)
-    required_checks    = optional(list(string), [])
-    wait_timer         = optional(number, 0)
+    branches                  = optional(list(string), [])
+    tags                      = optional(list(string), [])
+    required_approvals        = optional(number, 0)
+    require_code_owner_review = optional(bool, false)
+    required_checks           = optional(list(string), [])
+    wait_timer                = optional(number, 0)
   }))
   default = {
     # Merge a PR into dev: anyone with write access who can merge
@@ -56,9 +60,11 @@ variable "environment" {
       branches = ["dev"]
     }
     # Merge a PR into main: needs an approval from someone other than the author
+    # Pipelines and CI access reach main (and so prod) only with a code owner's approval
     stg = {
-      branches           = ["main"]
-      required_approvals = 1
+      branches                  = ["main"]
+      required_approvals        = 1
+      require_code_owner_review = true
     }
     # Push a v* tag: only `tag_creators`
     prod = {
@@ -90,5 +96,23 @@ variable "tag_creators" {
   validation {
     condition     = alltrue([for r in var.tag_creators : contains(["maintain", "write", "admin"], r)])
     error_message = "tag_creators must be base repository roles: maintain, write or admin."
+  }
+}
+
+variable "oidc_workflows" {
+  description = <<-EOT
+    Workflow files in .github/workflows/ allowed to assume each AWS role. Any
+    other workflow, even one running in the right environment or on a valid
+    release tag, is refused.
+      plan    the pull request role (<prefix>-plan)
+      deploy  every environment's deploy role (<prefix>-deploy-<env>)
+  EOT
+  type = object({
+    plan   = list(string)
+    deploy = list(string)
+  })
+  default = {
+    plan   = ["ci.yml"]
+    deploy = ["infra.yml", "_deploy.yml"]
   }
 }
