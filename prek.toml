@@ -2,13 +2,14 @@
 # See https://prek.j178.dev for more information.
 #:schema https://www.schemastore.org/prek.json
 
+default_install_hook_types = ["pre-commit", "pre-push"]
 
 [[repos]]
 repo = "builtin"
 hooks = [
-    { id = "trailing-whitespace" },
-    { id = "end-of-file-fixer" },
-    { id = "check-added-large-files" },
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-added-large-files" },
 ]
 
 [[repos]]
@@ -18,11 +19,15 @@ hooks = [
   { id = "terraform_fmt" },
   # Root modules (bootstrap/, infra/, infra/envs/*): init with -backend=false and
   # validate. Calling a module validates it too, through the root.
-  { id = "terraform_validate", alias = "terraform_validate_roots", name = "Terraform validate (roots)", args = ["--hook-config=--retry-once-with-cleanup=true"], exclude = '(^|/)modules/' },
+  { id = "terraform_validate", alias = "terraform_validate_roots", name = "Terraform validate (roots)", args = [
+    "--hook-config=--retry-once-with-cleanup=true",
+  ], exclude = '(^|/)modules/' },
   # Child modules (bootstrap/modules/*, infra/modules/*): validated on their own,
   # so a commit that only touches a module is still checked. The .terraform/
   # and lock file this leaves in each module are gitignored.
-  { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = ["--hook-config=--retry-once-with-cleanup=true"], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
+  { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = [
+    "--hook-config=--retry-once-with-cleanup=true",
+  ], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
   { id = "terraform_docs" },
 ]
 
@@ -32,7 +37,12 @@ hooks = [
 repo = "https://github.com/bridgecrewio/checkov"
 rev = "3.3.25"
 hooks = [
-  { id = "checkov", args = ["--framework", "terraform", "--quiet", "--compact"] },
+  { id = "checkov", args = [
+    "--framework",
+    "terraform",
+    "--quiet",
+    "--compact",
+  ] },
 ]
 
 # actionlint's hook is `language: golang`: prek builds it pinned by `rev`, so
@@ -41,9 +51,7 @@ hooks = [
 [[repos]]
 repo = "https://github.com/rhysd/actionlint"
 rev = "v1.7.12"
-hooks = [
-  { id = "actionlint" },
-]
+hooks = [{ id = "actionlint" }]
 
 # Run the GitHub Actions workflows locally with act (https://nektosact.com)
 # before each commit. Needs act and Docker on the developer's machine. It
@@ -51,7 +59,6 @@ hooks = [
 # skipped, and it skips the same paths the workflows ignore.
 [[repos]]
 repo = "local"
-stage = ["pre-push"]
 hooks = [
-  { id = "act", name = "Run workflows locally (act)", language = "system", entry = "act pull_request --rm --pull=false", pass_filenames = false, exclude = '^infra/|\.md$' },
+  { id = "act", name = "Run workflows locally (act)", stages = ["pre-push"], language = "system", entry = "act pull_request --rm --pull=false", pass_filenames = false, exclude = '^infra/|\.md$' },
 ]
