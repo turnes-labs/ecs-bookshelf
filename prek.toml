@@ -34,3 +34,13 @@ rev = "3.3.25"
 hooks = [
   { id = "checkov", args = ["--framework", "terraform", "--quiet", "--compact"] },
 ]
+
+# actionlint's hook is `language: golang`: prek builds it pinned by `rev`, so
+# developers don't install actionlint themselves. It only runs on files under
+# .github/workflows/.
+[[repos]]
+repo = "https://github.com/rhysd/actionlint"
+rev = "v1.7.12"
+hooks = [
+  { id = "actionlint" },
+]
