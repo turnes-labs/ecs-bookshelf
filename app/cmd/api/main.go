@@ -1,14 +1,26 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 	"uuid" // Go 1.27+
 )
+
+// shutdownTimeout is how long in-flight requests get to finish after
+// SIGTERM. It must stay below the ECS task's stopTimeout (30s by default),
+// or ECS sends SIGKILL before the server is done.
+const shutdownTimeout = 20 * time.Second
 
 var (
 	// mu guards books: net/http serves each request on its own goroutine.
@@ -34,6 +46,11 @@ func UpdateBook(target *Book, input UpdateBookPayload) {
 	if input.Author != nil {
 		target.Author = *input.Author
 	}
+}
+
+type Healthz struct {
+	Status   string `json:"status,omitempty"`
+	Database string `json:"db,omitempty"`
 }
 
 func main() {
@@ -137,8 +154,59 @@ func main() {
 
 	})
 
-	// Start the server
-	http.ListenAndServe(":8080", mux)
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		healthz := Healthz{
+			Status:   "OK",
+			Database: "in memory",
+		}
+		WriteData(w, http.StatusOK, healthz)
+	})
+
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	// ECS sends SIGTERM when it stops a task; SIGINT covers Ctrl+C locally.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serverErr := make(chan error, 1)
+	go func() {
+		slog.Info("server listening", "addr", srv.Addr)
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErr:
+		// The server failed to start or crashed (e.g. port already in use).
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
+	case <-ctx.Done():
+		stop() // a second signal now kills the process immediately
+		slog.Info("shutdown signal received, draining connections")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	// Shutdown stops accepting new connections and waits for in-flight
+	// requests to finish, up to shutdownTimeout.
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("graceful shutdown failed", "error", err)
+		os.Exit(1)
+	}
+
+	if err := <-serverErr; !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("server stopped with error", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("server stopped")
 }
 
 // APIResponse establishes a predictable structure for every API response.
