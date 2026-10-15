@@ -17,22 +17,23 @@ repo = "https://github.com/antonbabenko/pre-commit-terraform"
 rev = "v1.109.2"
 hooks = [
   { id = "terraform_fmt" },
-  # Root modules (bootstrap/, infra/, infra/envs/*): init with -backend=false and
-  # validate. Calling a module validates it too, through the root.
+
   { id = "terraform_validate", alias = "terraform_validate_roots", name = "Terraform validate (roots)", args = [
     "--hook-config=--retry-once-with-cleanup=true",
   ], exclude = '(^|/)modules/' },
-  # Child modules (bootstrap/modules/*, infra/modules/*): validated on their own,
-  # so a commit that only touches a module is still checked. The .terraform/
-  # and lock file this leaves in each module are gitignored.
+
   { id = "terraform_validate", alias = "terraform_validate_modules", name = "Terraform validate (modules)", args = [
     "--hook-config=--retry-once-with-cleanup=true",
   ], files = '(^|/)modules/[^/]+/[^/]+\.tf$' },
   { id = "terraform_docs" },
 ]
 
-# Checkov's own hook is `language: python`: prek installs it in an isolated
-# virtualenv pinned by `rev`, so developers don't install checkov themselves.
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "infracost", name = "Infracost", language = "system", entry = "infracost scan .", pass_filenames = false, files = '^(infra|bootstrap)/', stages = ["pre-push", "manual"] },
+]
+
 [[repos]]
 repo = "https://github.com/bridgecrewio/checkov"
 rev = "3.3.25"
@@ -45,29 +46,19 @@ hooks = [
   ] },
 ]
 
-# actionlint's hook is `language: golang`: prek builds it pinned by `rev`, so
-# developers don't install actionlint themselves. It only runs on files under
-# .github/workflows/.
 [[repos]]
 repo = "https://github.com/rhysd/actionlint"
 rev = "v1.7.12"
 hooks = [{ id = "actionlint" }]
 
-# Run the GitHub Actions workflows locally with act (https://nektosact.com)
-# before each commit. Needs act and Docker on the developer's machine. It
-# simulates a `pull_request` event, so jobs gated off PRs (image push) are
-# skipped, and it skips the same paths the workflows ignore.
+
 [[repos]]
 repo = "local"
 hooks = [
   { id = "act", name = "Run workflows locally (act)", stages = ["pre-push"], language = "system", entry = "act pull_request --rm --pull=false", pass_filenames = false, exclude = '^infra/|\.md$' },
 ]
 
-# Trivy scans the whole working tree for vulnerable dependencies, leaked
-# secrets and misconfigurations (Dockerfiles, Terraform, Kubernetes, etc.).
-# It has no hook of its own, so it needs trivy on the developer's machine.
-# Only HIGH and CRITICAL findings fail the commit; .terraform/ caches are
-# skipped because they hold third-party providers and modules.
+
 [[repos]]
 repo = "local"
 hooks = [
